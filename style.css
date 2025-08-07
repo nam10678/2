@@ -1,0 +1,22 @@
+
+body {
+  font-family: Arial;
+  background: #f2f2f2;
+  padding: 20px;
+  text-align: center;
+}
+.container {
+  background: #fff;
+  border-radius: 10px;
+  padding: 20px;
+  display: inline-block;
+}
+button {
+  padding: 10px 20px;
+  margin: 5px;
+  font-size: 16px;
+}
+button.player { background-color: blue; color: white; }
+button.banker { background-color: red; color: white; }
+button.tie { background-color: gray; color: white; }
+.result span { font-size: 24px; font-weight: bold; }
