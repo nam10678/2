@@ -1,136 +1,125 @@
-// script.js - fallback loader for tfjs_tie + tfjs_pb_N ensemble
-const TIE_CANDIDATES = ["tfjs_tie/model.json","tfjs_model/model.json","model/model.json"];
-const PB_CANDIDATES_BASE = ["tfjs_pb_1","tfjs_pb_2","tfjs_pb_3","tfjs_pb_4","tfjs_pb_5"];
-const DEFAULT_TIE_THRESHOLD = 0.20; // nếu bạn có threshold khác, sửa ở đây
+// ================= Baccarat Predictor Script =================
 
+// Load candidates models
+const TIE_CANDIDATES = ["./tfjs_tie/model.json"];
+const PB_CANDIDATES_BASE = [
+  "./tfjs_pb_1",
+  "./tfjs_pb_2",
+  "./tfjs_pb_3",
+  "./tfjs_pb_4",
+  "./tfjs_pb_5"
+];
+
+const DEFAULT_TIE_THRESHOLD = 0.20;
 let tieModel = null;
 let pbModels = [];
 let tieThreshold = DEFAULT_TIE_THRESHOLD;
 let history = [];
 
-const ONE_HOT = { P: [1,0,0], B: [0,1,0], T: [0,0,1] };
-
-async function tryLoad(path) {
-  try {
-    const m = await tf.loadLayersModel(path);
-    console.log("Loaded model:", path);
-    return m;
-  } catch (e) {
-    return null;
-  }
-}
-
+// --------- Load models ---------
 async function loadModels() {
-  // tie model - try candidates
-  for (const p of TIE_CANDIDATES) {
-    tieModel = await tryLoad(p);
-    if (tieModel) break;
-  }
-  if (!tieModel) console.error("Tie model not found in:", TIE_CANDIDATES);
+  console.log("Loading models...");
 
-  // pb ensemble
-  pbModels = [];
-  for (const base of PB_CANDIDATES_BASE) {
-    const path = `${base}/model.json`;
-    const m = await tryLoad(path);
-    if (m) pbModels.push(m);
-  }
-  if (pbModels.length === 0) console.warn("No PB models found.");
-  console.log("Models loaded → tie:", !!tieModel, "pb_count:", pbModels.length);
-}
-
-// Helpers
-function oneHotFromHistory(seq5) {
-  const arr = seq5.flatMap(s => ONE_HOT[s] || [0,0,0]);
-  return tf.tensor([arr], [1, 5, 3]);
-}
-
-async function predictFromHistory() {
-  if (history.length < 5) return null;
-  const seq5 = history.slice(-5);
-  const inputTensor = oneHotFromHistory(seq5);
-
-  // tie check
-  if (tieModel) {
+  // Try Tie model
+  for (let url of TIE_CANDIDATES) {
     try {
-      const tiePred = await tieModel.predict(inputTensor).data();
-      const tieProb = tiePred[0];
-      if (tieProb >= tieThreshold) {
-        inputTensor.dispose();
-        return { label: "T", confidence: Number((tieProb*100).toFixed(2)) };
-      }
-    } catch (e) {
-      console.error("tieModel predict error:", e);
+      tieModel = await tf.loadLayersModel(url);
+      console.log("✅ Tie model loaded:", url);
+      break;
+    } catch (err) {
+      console.warn("Tie model load failed:", url, err.message);
     }
   }
 
-  // PB ensemble
-  if (pbModels.length > 0) {
-    let sumP = 0;
-    let got = 0;
-    for (const m of pbModels) {
-      try {
-        const p = await m.predict(inputTensor).data();
-        sumP += p[0];
-        got++;
-      } catch (e) {
-        console.warn("pb model predict failed:", e);
-      }
+  // Try PB models
+  for (let base of PB_CANDIDATES_BASE) {
+    try {
+      let m = await tf.loadLayersModel(`${base}/model.json`);
+      pbModels.push(m);
+      console.log("✅ PB model loaded:", base);
+    } catch (err) {
+      console.warn("PB model load failed:", base, err.message);
     }
-    const avgP = got ? sumP / got : 0.5;
-    const label = avgP >= 0.5 ? "P" : "B";
-    inputTensor.dispose();
-    return { label, confidence: Number(((avgP>=0.5?avgP:(1-avgP))*100).toFixed(2)) };
   }
 
-  inputTensor.dispose();
-  return { label: seq5[4], confidence: 0 };
+  console.log(`Models loaded -> Tie: ${tieModel ? "ok" : "none"} | PB count: ${pbModels.length}`);
 }
 
-// UI
-function updateUIPrediction(pred) {
-  const labelEl = document.getElementById("predicted-label");
-  const confEl = document.getElementById("confidence");
-  if (!labelEl || !confEl) return;
-  if (!pred) {
-    labelEl.textContent = "--";
-    confEl.textContent = "--";
-    labelEl.style.color = "";
+// --------- Encode input ---------
+function encodeInput(seq) {
+  const map = { "P": [1, 0, 0], "B": [0, 1, 0], "T": [0, 0, 1] };
+  return tf.tensor([seq.map(c => map[c])], [1, 5, 3]);
+}
+
+// --------- Predict ---------
+async function predictNext(seq) {
+  if (seq.length < 5) return { label: "?", probs: [0, 0, 0] };
+
+  let x = encodeInput(seq);
+
+  // Tie prediction
+  let tieProb = 0.0;
+  if (tieModel) {
+    tieProb = (await tieModel.predict(x).data())[0];
+  }
+
+  // P/B prediction
+  let pbProb = 0.5;
+  if (pbModels.length > 0) {
+    let probs = [];
+    for (let m of pbModels) {
+      let p = (await m.predict(x).data())[0];
+      probs.push(p);
+    }
+    pbProb = probs.reduce((a, b) => a + b, 0) / probs.length;
+  }
+
+  // Combine
+  let probs = [0, 0, 0]; // [P,B,T]
+  if (tieProb >= tieThreshold) {
+    probs = [0, 0, tieProb];
+  } else {
+    probs = [pbProb * (1 - tieProb), (1 - pbProb) * (1 - tieProb), tieProb];
+  }
+
+  let label = ["P", "B", "T"][probs.indexOf(Math.max(...probs))];
+  return { label, probs };
+}
+
+// --------- UI handlers ---------
+function addResult(res) {
+  history.push(res);
+  if (history.length > 5) history.shift();
+  updateHistoryUI();
+}
+
+async function updatePrediction() {
+  if (history.length < 5) {
+    document.getElementById("prediction").innerText = "Need 5 results first.";
     return;
   }
-  labelEl.textContent = pred.label;
-  confEl.textContent = pred.confidence + "%";
-  labelEl.style.color = pred.label === "P" ? "green" : pred.label === "B" ? "red" : "gray";
+
+  let { label, probs } = await predictNext(history.slice(-5));
+  let txt = `Predict: ${label} | P=${(probs[0] * 100).toFixed(1)}%  B=${(probs[1] * 100).toFixed(1)}%  T=${(probs[2] * 100).toFixed(1)}%`;
+  document.getElementById("prediction").innerText = txt;
 }
 
-async function addResult(ch) {
-  if (!["P","B","T"].includes(ch)) return;
-  history.push(ch);
-  if (history.length > 200) history.shift();
-  renderHistory();
-  if (history.length >= 5) {
-    const pred = await predictFromHistory();
-    updateUIPrediction(pred);
-  }
+function updateHistoryUI() {
+  document.getElementById("history").innerText = "History: " + history.join(", ");
 }
 
-function resetHistory() {
-  history = [];
-  renderHistory();
-  updateUIPrediction(null);
+// --------- Button bindings ---------
+function setupButtons() {
+  document.getElementById("btnP").onclick = () => { addResult("P"); updatePrediction(); };
+  document.getElementById("btnB").onclick = () => { addResult("B"); updatePrediction(); };
+  document.getElementById("btnT").onclick = () => { addResult("T"); updatePrediction(); };
+  document.getElementById("btnReset").onclick = () => { history = []; updateHistoryUI(); document.getElementById("prediction").innerText = ""; };
 }
 
-function renderHistory() {
-  const el = document.getElementById("history");
-  if (!el) return;
-  el.innerHTML = history.map(h => `<span class="hist-item ${h}">${h}</span>`).join(" ");
-}
-
-// init
-window.addEventListener("load", async () => {
-  const stat = document.getElementById("model-status");
-  if (stat) stat.textContent = "Loading models...";
+// --------- Init ---------
+window.onload = async () => {
   await loadModels();
-  if (stat) stat.textContent = "Models loaded.";
-  renderHistory();
-});
+  setupButtons();
+  updateHistoryUI();
+  document.getElementById("prediction").innerText = "Ready.";
+};
