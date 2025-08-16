@@ -1,0 +1,56 @@
+
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>AI Baccarat — Optimized</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <div class="topbar">
+    <div class="brand">BCR<span>AI</span></div>
+    <div class="subtitle">Dự đoán Baccarat — Tự động sau 5 kết quả</div>
+  </div>
+
+  <main class="main">
+    <section class="controls card">
+      <div class="btn-row">
+        <button class="btn btn-p" onclick="addResult('P')">P — Player</button>
+        <button class="btn btn-b" onclick="addResult('B')">B — Banker</button>
+        <button class="btn btn-t" onclick="addResult('T')">T — Tie</button>
+      </div>
+      <div class="actions">
+        <button class="btn btn-reset" onclick="resetHistory()">Reset</button>
+        <button class="btn btn-export" onclick="exportHistory()">Export CSV</button>
+      </div>
+      <div id="warnings" class="warnings"></div>
+    </section>
+
+    <section class="status card">
+      <div class="history-block">
+        <h3>Lịch sử</h3>
+        <div id="history" class="history">—</div>
+      </div>
+      <div class="prediction-block">
+        <h3>Dự đoán tiếp theo</h3>
+        <div id="prediction" class="prediction">
+          <div id="predicted-label" class="pred-label">--</div>
+          <div id="confidence" class="confidence">--%</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="chart card">
+      <h3>Biểu đồ lịch sử</h3>
+      <canvas id="historyChart" height="120" aria-label="Biểu đồ lịch sử"></canvas>
+    </section>
+  </main>
+
+  <footer class="footer">Lưu lịch sử trong LocalStorage • Chạy qua HTTP (GitHub Pages hoặc `python -m http.server`)</footer>
+
+  <script src="script.js"></script>
+</body>
+</html>

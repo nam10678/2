@@ -1,0 +1,43 @@
+
+:root{
+  --bg:#0f1724;
+  --card:#0b1220;
+  --muted:#94a3b8;
+  --accent:#06b6d4;
+  --player:#22c55e;
+  --banker:#ef4444;
+  --tie:#9ca3af;
+  --glass: rgba(255,255,255,0.03);
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter,Segoe UI,Roboto,Arial;background:linear-gradient(180deg,#071028 0%, #071a2a 100%);color:#e6eef8;min-height:100vh}
+.topbar{display:flex;align-items:center;gap:20px;padding:18px 24px;border-bottom:1px solid rgba(255,255,255,0.03)}
+.brand{font-weight:800;font-size:20px;color:var(--accent)}
+.brand span{color:#fff;margin-left:6px}
+.subtitle{color:var(--muted);font-size:13px}
+.main{display:grid;grid-template-columns:320px 1fr;gap:18px;padding:20px;max-width:1100px;margin:18px auto;width:100%}
+.card{background:var(--card);border-radius:12px;padding:16px;box-shadow:0 6px 30px rgba(2,6,23,0.6);border:1px solid rgba(255,255,255,0.03)}
+.controls .btn-row{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-bottom:12px}
+.btn{padding:10px 14px;border-radius:10px;border:0;font-weight:700;cursor:pointer}
+.btn-p{background:linear-gradient(90deg,#059669,#34d399);color:#052e14}
+.btn-b{background:linear-gradient(90deg,#f43f5e,#fb7185);color:#33060a}
+.btn-t{background:linear-gradient(90deg,#9ca3af,#d1d5db);color:#0f1724}
+.btn-reset{background:#111827;color:#fff;border-radius:8px;padding:8px 10px}
+.btn-export{background:transparent;color:var(--muted);border:1px dashed rgba(255,255,255,0.04);padding:8px 10px;border-radius:8px}
+.warnings{color:#ffcccb;font-weight:700;margin-top:6px;text-align:center}
+
+.status{display:flex;flex-direction:column;gap:12px}
+.history{min-height:40px;padding:8px;border-radius:8px;background:var(--glass);display:flex;align-items:center;justify-content:flex-start;gap:8px;flex-wrap:wrap}
+.prediction{display:flex;align-items:center;gap:12px;justify-content:center}
+.pred-label{padding:10px 16px;border-radius:10px;font-weight:800;font-size:20px;color:#042022}
+.confidence{font-size:16px;color:var(--muted)}
+
+.chart{grid-column:1 / -1}
+
+.footer{text-align:center;color:var(--muted);padding:10px 0;font-size:13px}
+
+/* responsive */
+@media (max-width:900px){
+  .main{grid-template-columns:1fr;padding:12px}
+  .chart{order:3}
+}
